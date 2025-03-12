@@ -1,53 +1,80 @@
-import { StyleSheet, Text, View } from "react-native";
-import {
-    ViroARScene,
-    ViroARSceneNavigator,
-    ViroText,
-    ViroTrackingReason,
-    ViroTrackingStateConstants,
-} from "@reactvision/react-viro"
-import { useState } from "react";
-
-const TestSceneAR = () => {
-    const [text, setText] = useState("Initializing Test AR..")
-
-    function onInitialized(state: any, reason: ViroTrackingReason) {
-        console.log("Test Initialized", state, reason);
-        if (state == ViroTrackingStateConstants.TRACKING_NORMAL) {
-            setText("Initialized and tracking!")
-        }
-    }
-
-    return (
-        <ViroARScene onTrackingUpdated={onInitialized}>
-            <ViroText 
-                text={text}
-                scale={[0.5, 0.5, 0.5]}
-                position={[0, 0, -1]}
-                style={styles.testTextStyle}
-            />
-        </ViroARScene>
-    )
-}
+import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router"; // Use expo-router instead of react-navigation
 
 export default function Index() {
+  const router = useRouter(); // Get router object
+
   return (
-    <ViroARSceneNavigator 
-        autofocus={true}
-        initialScene={{
-            scene: TestSceneAR
-        }}
-        style={styles.index}
-    />
+    <View style={styles.container}>
+      <Text style={styles.title}>ARIA</Text>
+      <Text style={styles.description}>
+        Record moments and follow lyrics in real-time. Relive the music anytime.
+      </Text>
+      
+      {}
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={() => router.push('/login')} 
+      >
+        <Text style={styles.buttonText}>Login</Text>
+      </TouchableOpacity>
+
+      {}
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={() => router.push('/signup')} 
+        >
+            <Text style={styles.buttonText}>Sign Up</Text>
+      </TouchableOpacity>
+
+      {}
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={() => router.push('/ar')}
+        >
+            <Text style={styles.buttonText}>AR</Text>
+        </TouchableOpacity>
+
+      <Text style={styles.terms}>
+        By continuing you agree to our Terms of Service and acknowledge our Privacy Policy.
+      </Text>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-    index: { flex: 1 },
-    testTextStyle: {
-        fontSize: 30,
-        color: "#ffffff",
-        textAlignVertical: "center",
-        textAlign: "center"
-    }
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'black',
+    padding: 16,
+  },
+  title: {
+    fontSize: 48,
+    color: 'blue',
+    marginBottom: 20,
+  },
+  description: {
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 40,
+  },
+  button: {
+    backgroundColor: 'blue',
+    padding: 15,
+    borderRadius: 5,
+    width: '80%',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 18,
+  },
+  terms: {
+    color: 'white',
+    textAlign: 'center',
+    marginTop: 20,
+  },
 });
