@@ -1,16 +1,29 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import auth from '@react-native-firebase/auth';
 
 export default function Login() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = async () => {
+    try {
+      const userCredential = await auth().signInWithEmailAndPassword(email, password);
+      const idToken = await userCredential.user.getIdToken();
+      console.log('User Token:', idToken);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="black" />
-      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="black" secureTextEntry />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="black" value={email} onChangeText={setEmail} />
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="black" secureTextEntry value={password} onChangeText={setPassword}/>
       
-      <TouchableOpacity style={styles.button} onPress={() => {}}>
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Login</Text>
       </TouchableOpacity>
 

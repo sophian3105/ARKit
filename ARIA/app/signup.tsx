@@ -1,17 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, TextInput, Button, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import auth from '@react-native-firebase/auth';
+
+
 
 export default function Signup() {
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  return (
+  const handleSignup = async () => {
+    if (password !== confirmPassword) {
+      console.error('Error', 'Passwords do not match!');
+      return;
+    }
+    try {
+      const userCredential = await auth().createUserWithEmailAndPassword(email, password);
+      const idToken = await userCredential.user.getIdToken();
+      console.log('User Token:', idToken);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+
+    return (
     <View style={styles.container}>
-      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="black" />
-      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="black" secureTextEntry />
-      <TextInput style={styles.input} placeholder="Confirm password" placeholderTextColor="black" secureTextEntry />
+      <TextInput style={styles.input} placeholder="Email" placeholderTextColor="black" value={email} onChangeText={setEmail}/>
+      <TextInput style={styles.input} placeholder="Password" placeholderTextColor="black" secureTextEntry value={password} onChangeText={setPassword}/>
+      <TextInput style={styles.input} placeholder="Confirm password" placeholderTextColor="black" secureTextEntry value={confirmPassword} onChangeText={setConfirmPassword}/>
       
-      <TouchableOpacity style={styles.button} onPress={() => {}}>
+      <TouchableOpacity style={styles.button} onPress={handleSignup}>
         <Text style={styles.buttonText}>Sign Up</Text>
       </TouchableOpacity>
 
