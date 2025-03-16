@@ -1,9 +1,14 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"log"
+	"net/http"
+
+	_ "github.com/joho/godotenv/autoload" // Loads the .env
+)
 
 func main() {
-	router := gin.Default()
-	HandleRouter(router)
-	router.Run("localhost:8080")
+	// Setup the web server
+	mainHandler := MainHandler()
+	log.Fatal(http.ListenAndServe(":8080", mainHandler))
 }

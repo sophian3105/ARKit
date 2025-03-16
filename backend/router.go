@@ -2,67 +2,42 @@ package main
 
 import (
 	util "aria/backend/utility"
-	"net/http"
-	"strings"
+	"encoding/json"
 
-	"firebase.google.com/go/auth"
-	"github.com/gin-gonic/gin"
+	"net/http"
 )
 
-// HandleRouter provides the paths for the router
-// Owner must call router.Run(...)
-func HandleRouter(router *gin.Engine) {
-	router.GET("/ping", getPing)
+// MainHandler provides the main starting handler
+// for any http request.
+func MainHandler() http.Handler {
+	mux := http.NewServeMux()
 
-	// Any routes/groups in authorized must be secured 
-	// with firebase
-	authorized := router.Group("/")
-	authorized.Use(AuthMiddleware())
-	{
-		authorized.GET("/auth", getAuth)
-	}
+	defaultBase := util.NewRouter(mux, "/")
+	defaultBase.Use(util.LoggerMiddleware())
+
+	defaultBase.Handle("/ping", getPing, http.MethodGet, http.MethodPost)
+
+	// Any routes using this middleware must be fully authorized
+	authBase := defaultBase.Branch("/api")
+	authBase.Use(util.AuthMiddleware())
+	authBase.Handle("/auth", getAuth, http.MethodGet)
+	return mux
 }
 
 // Simple get method to ping the backend
-func getPing(c *gin.Context) {
-	ginContent := gin.H{
-		"message": "pong",
+func getPing(w http.ResponseWriter, r *http.Request, d *util.MiddlewareData) {
+	if r.Method != http.MethodGet {
+		return
 	}
 
-	c.JSON(http.StatusOK, ginContent)
+	w.WriteHeader(http.StatusOK)
+	ginContent := map[string]string{
+		"message": "pong",
+	}
+	json.NewEncoder(w).Encode(ginContent)
 }
 
 // Simple method to test auth
-func getAuth(c *gin.Context) {
-	token := c.MustGet("token").(auth.Token)
-	c.JSON(http.StatusOK, token)
-}
-
-func AuthMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		client := util.FBClient()
-		
-		if client == nil {
-			c.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
-
-		authHeader := c.GetHeader("Authorization")
-		authTokenString, found := strings.CutPrefix(authHeader, "Bearer ")
-
-		if !found {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		authToken, err := client.Auth.VerifyIDToken(c, authTokenString)
-		
-		if err != nil || authToken != nil {
-			c.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		c.Set("token", authToken)
-		c.Next()
-	}
+func getAuth(w http.ResponseWriter, r *http.Request, d *util.MiddlewareData) {
+	w.WriteHeader(http.StatusOK)
 }
