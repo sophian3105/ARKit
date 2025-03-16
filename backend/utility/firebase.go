@@ -73,11 +73,6 @@ func FBClient() *FirebaseClient {
 func AuthMiddleware() *Middleware {
 	return NewMiddleware(func(w http.ResponseWriter, r *http.Request, md *MiddlewareData) {
 		client := FBClient()
-		
-		if client == nil {
-			md.AbortWithStatus(http.StatusInternalServerError)
-			return
-		}
 
 		authHeader := r.Header.Get("Authorization")
 		authTokenString, found := strings.CutPrefix(authHeader, "Bearer ")
