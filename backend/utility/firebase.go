@@ -29,24 +29,22 @@ func (fc *FirebaseClient) connect() error {
 
 	if err != nil { return err }
 	if dbUrl == "" { return fmt.Errorf("empty DB_URL string") }
-
-	fmt.Println(home)
 	
 	ctx := context.Background()
 	opt := option.WithCredentialsFile(home + "/firebase-adminsdk.json")
-	config := &firebase.Config{}
+	config := &firebase.Config{DatabaseURL: dbUrl}
 	app, err := firebase.NewApp(ctx, config, opt)
 
 	if err != nil { return fmt.Errorf("error initializing app %v", err) }
 
-	// dbClient, dbErr := app.DatabaseWithURL(ctx, dbUrl)
+	dbClient, dbErr := app.Database(ctx)
 	authClient, authErr := app.Auth(ctx)
 
-	if /*dbErr != nil ||*/ authErr != nil {
-		return fmt.Errorf("error initializing clients: %v", authErr)
+	if dbErr != nil || authErr != nil {
+		return fmt.Errorf("error initializing clients: %v %v", authErr, dbErr)
 	}
 
-	// fc.Database = dbClient
+	fc.Database = dbClient
 	fc.Auth = authClient
 	return nil
 }
@@ -58,7 +56,8 @@ func FBClient() *FirebaseClient {
 		tmp := &FirebaseClient{}
 		err := tmp.connect() 
 		
-		if err != nil {
+		if err == nil {
+			// Successful so assign
 			fireDB = tmp
 		} else {
 			// Should always connect
@@ -84,7 +83,7 @@ func AuthMiddleware() *Middleware {
 
 		authToken, err := client.Auth.VerifyIDToken(r.Context(), authTokenString)
 		
-		if err != nil || authToken != nil {
+		if err != nil || authToken == nil {
 			md.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

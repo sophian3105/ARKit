@@ -101,6 +101,7 @@ func (b *Router) Handle(path string, h RouteHandler, methods ...string) {
 
 			if data.ShouldAbort() {
 				w.WriteHeader(data.abortStatus)
+				log.Printf("Aborting request with status %d", data.abortStatus)
 				return
 			}
 		}
