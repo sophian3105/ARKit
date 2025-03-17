@@ -83,7 +83,7 @@ func AuthMiddleware() *Middleware {
 
 		authToken, err := client.Auth.VerifyIDToken(r.Context(), authTokenString)
 		
-		if err != nil || authToken == nil {
+		if err != nil {
 			md.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

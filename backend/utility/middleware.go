@@ -93,9 +93,9 @@ func (b *Router) Handle(path string, h RouteHandler, methods ...string) {
 	if len(methods) == 0 {
 		methods = append(methods, http.MethodGet)
 	}
-
-	data := &MiddlewareData{}
+	
 	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		data := &MiddlewareData{}
 		for _, m := range b.middlewares {
 			m.handler(w, req, data)
 

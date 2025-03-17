@@ -25,7 +25,7 @@ func MainHandler() http.Handler {
 }
 
 // Simple get method to ping the backend
-func getPing(w http.ResponseWriter, r *http.Request, d *util.MiddlewareData) {
+func getPing(w http.ResponseWriter, r *http.Request, _ *util.MiddlewareData) {
 	if r.Method != http.MethodGet {
 		return
 	}
