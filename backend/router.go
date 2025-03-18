@@ -2,8 +2,6 @@ package main
 
 import (
 	util "aria/backend/utility"
-	"encoding/json"
-
 	"net/http"
 )
 
@@ -25,19 +23,14 @@ func MainHandler() http.Handler {
 }
 
 // Simple get method to ping the backend
-func getPing(w http.ResponseWriter, r *http.Request, _ *util.MiddlewareData) {
-	if r.Method != http.MethodGet {
-		return
-	}
-
-	w.WriteHeader(http.StatusOK)
+func getPing(ctx *util.Context) {
 	ginContent := map[string]string{
 		"message": "pong",
 	}
-	json.NewEncoder(w).Encode(ginContent)
+	ctx.Json(http.StatusOK, ginContent)
 }
 
 // Simple method to test auth
-func getAuth(w http.ResponseWriter, r *http.Request, d *util.MiddlewareData) {
-	w.WriteHeader(http.StatusOK)
+func getAuth(ctx *util.Context) {
+	ctx.WriteHeader(http.StatusOK)
 }

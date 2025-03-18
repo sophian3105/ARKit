@@ -1,6 +1,7 @@
 package utility
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,31 +10,50 @@ import (
 	"firebase.google.com/go/v4/auth"
 )
 
-// The data passed and can be filled
-type MiddlewareData struct{
-	*auth.Token
+// Context The data passed and can be filled
+type Context struct {
+	*auth.Token // Can be nil
 
 	// This field allows you to abort right away and return this response
 	// Default 0 means there is no status
-	abortStatus int
-}
-
-func (d *MiddlewareData) AbortWithStatus(status int) {
-	if d == nil {
-		panic("AbortWithStatus d is nil")
+	abortStatus struct {
+		status int
+		msg    string
 	}
 
-	d.abortStatus = status
+	http.ResponseWriter // Never nil
+	*http.Request // Never nil
 }
 
-func (d *MiddlewareData) ShouldAbort() bool {
-	return d == nil || d.abortStatus != 0
+func (ctx *Context) AbortWithStatus(status int, msg string) {
+	if ctx == nil {
+		panic("AbortWithStatus ctx is nil")
+	}
+
+	ctx.abortStatus.status = status
+	ctx.abortStatus.msg = msg
 }
 
-// A main handler for each middleware
-type MiddlewareHandler func(http.ResponseWriter, *http.Request, *MiddlewareData)
+func (ctx *Context) ShouldAbort() bool {
+	return ctx == nil || ctx.abortStatus.status != 0
+}
 
-// Base data to pass into a main handler
+func (ctx *Context) Json(status int, v interface{}) {
+	ctx.WriteHeader(status)
+	ctx.ResponseWriter.Header().Set(ContentType, ApplicationJson)
+	err := json.NewEncoder(ctx.ResponseWriter).Encode(v)
+
+	if err != nil {
+		// Handle encoding error
+		log.Printf("Error encoding json: %v", err)
+		ctx.AbortWithStatus(http.StatusInternalServerError, err.Error())
+	}
+}
+
+// MiddlewareHandler A main handler for each middleware
+type MiddlewareHandler func(*Context)
+
+// Middleware Base data to pass into a main handler
 type Middleware struct {
 	handler MiddlewareHandler
 }
@@ -44,36 +64,35 @@ func NewMiddleware(h MiddlewareHandler) *Middleware {
 	}
 }
 
-// The starting base for a chain of middleware
+// Router The starting base for a chain of middleware
 type Router struct {
 	middlewares []*Middleware
-	path string
-	mux *http.ServeMux
-	lock sync.Mutex
+	path        string
+	mux         *http.ServeMux
+	lock        sync.Mutex
 }
 
 func NewRouter(mux *http.ServeMux, path string) *Router {
 	path = mergePath("", path)
 
 	return &Router{
-		mux: mux,
+		mux:  mux,
 		path: path,
 	}
 }
 
-func (b *Router) Use(m ...*Middleware) error {
+func (b *Router) Use(m ...*Middleware) {
 	b.middlewares = append(b.middlewares, m...)
-	return nil
 }
 
-// Creates a new branch off of the current base, reusing every middleware
+// Branch Creates a new branch off of the current base, reusing every middleware
 // up to this point
 func (b *Router) Branch(path string) *Router {
 	if b == nil {
 		// Ensure the pointer is valid
 		panic("router is null when branching")
 	}
-	
+
 	tmp := NewRouter(b.mux, mergePath(b.path, path))
 
 	// Share the same middlewares but not array
@@ -82,7 +101,7 @@ func (b *Router) Branch(path string) *Router {
 	return tmp
 }
 
-// Another name for a handler. The main end request 
+// RouteHandler Another name for a handler. The main end request
 type RouteHandler MiddlewareHandler
 
 func (b *Router) Handle(path string, h RouteHandler, methods ...string) {
@@ -93,23 +112,36 @@ func (b *Router) Handle(path string, h RouteHandler, methods ...string) {
 	if len(methods) == 0 {
 		methods = append(methods, http.MethodGet)
 	}
-	
-	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		data := &MiddlewareData{}
-		for _, m := range b.middlewares {
-			m.handler(w, req, data)
 
-			if data.ShouldAbort() {
-				w.WriteHeader(data.abortStatus)
-				log.Printf("Aborting request with status %d", data.abortStatus)
+	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ctx := &Context{
+			ResponseWriter: w,
+			Request: req,
+		}
+
+		// handleAbort is a helper function to check if the context should abort
+		// and if true should return
+		handleAbort := func(handler MiddlewareHandler) bool {
+			handler(ctx)
+			if ctx.ShouldAbort() {
+				http.Error(w, ctx.abortStatus.msg, ctx.abortStatus.status)
+				log.Printf("Aborting request with status %d", ctx.abortStatus.status)
+				return true
+			}
+
+			return false
+		}
+
+		for _, m := range b.middlewares {
+			if handleAbort(m.handler) {
 				return
 			}
 		}
-		
-		h(w, req, data)
+
+		handleAbort(MiddlewareHandler(h)) // In case any errors occur
 	})
 
-	for _, method  := range methods {
+	for _, method := range methods {
 		p := fmt.Sprintf("%s %s", method, mergePath(b.path, path))
 		log.Println(p)
 		b.mux.Handle(p, handler)
@@ -123,27 +155,20 @@ func mergePath(path1 string, path2 string) string {
 		path2 = "/" + path2
 	}
 
-	if (len(path1) > 0 && path1[len(path1) - 1] == '/') {
+	if len(path1) > 0 && path1[len(path1)-1] == '/' {
 		// Special case
-		path1 = path1[:len(path1) - 1]
+		path1 = path1[:len(path1)-1]
 	}
 
 	return path1 + path2
 }
 
-// A few default implementations
+/* A few default implementations */
+
 func LoggerMiddleware() *Middleware {
 	return NewMiddleware(
-		func(w http.ResponseWriter, req *http.Request, d *MiddlewareData) {
+		func(d *Context) {
 			log.Println("executing request")
-		},
-	)
-}
-
-func JsonMiddleware() *Middleware {
-	return NewMiddleware(
-		func(w http.ResponseWriter, req *http.Request, d *MiddlewareData) {
-			w.Header().Set(ContentType, ApplicationJson)
 		},
 	)
 }

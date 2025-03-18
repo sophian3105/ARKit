@@ -70,24 +70,24 @@ func FBClient() *FirebaseClient {
 }
 
 func AuthMiddleware() *Middleware {
-	return NewMiddleware(func(w http.ResponseWriter, r *http.Request, md *MiddlewareData) {
+	return NewMiddleware(func(ctx *Context) {
 		client := FBClient()
 
-		authHeader := r.Header.Get("Authorization")
+		authHeader := ctx.Request.Header.Get("Authorization")
 		authTokenString, found := strings.CutPrefix(authHeader, "Bearer ")
 
 		if !found {
-			md.AbortWithStatus(http.StatusUnauthorized)
+			ctx.AbortWithStatus(http.StatusUnauthorized, "No auth token found")
 			return
 		}
 
-		authToken, err := client.Auth.VerifyIDToken(r.Context(), authTokenString)
+		authToken, err := client.Auth.VerifyIDToken(ctx.Context(), authTokenString)
 		
 		if err != nil {
-			md.AbortWithStatus(http.StatusUnauthorized)
+			ctx.AbortWithStatus(http.StatusUnauthorized, err.Error())
 			return
 		}
 
-		md.Token = authToken
+		ctx.Token = authToken
 	})
 }
