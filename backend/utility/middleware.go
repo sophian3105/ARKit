@@ -4,6 +4,7 @@ import (
 	"aria/backend/database"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"sync"
@@ -24,7 +25,7 @@ type Context struct {
 	}
 
 	http.ResponseWriter // Never nil
-	*http.Request // Never nil
+	*http.Request       // Never nil
 }
 
 func (ctx *Context) AbortWithStatus(status int, msg string) {
@@ -50,6 +51,57 @@ func (ctx *Context) Json(status int, v interface{}) {
 		log.Printf("Error encoding json: %v", err)
 		ctx.AbortWithStatus(http.StatusInternalServerError, err.Error())
 	}
+}
+
+func (ctx *Context) DecodeJson(v interface{}) error {
+	if ctx == nil {
+		panic("DecodeJson ctx is nil")
+	}
+
+	return json.NewDecoder(ctx.Body).Decode(v)
+}
+
+// StreamDecodeJson Decodes a stream of json objects
+// This function will close the channel when it's done
+func StreamDecodeJson[T any](ctx *Context, c chan<- T) error {
+	if ctx == nil {
+		panic("StreamDecodeJson ctx is nil")
+	}
+
+	defer func() {
+		close(c)
+	}()
+
+	decoder := json.NewDecoder(ctx.Body)
+
+	for {
+		var v T
+		if err := decoder.Decode(&v); err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				return err
+			}
+		}
+
+		c <- v
+	}
+
+	return nil
+}
+
+func (ctx *Context) GetEmail() *string {
+	if ctx == nil || ctx.Token == nil {
+		panic("GetEmail ctx is nil")
+	}
+
+	emails, ok := ctx.Token.Firebase.Identities["email"].([]string)
+
+	if !ok || len(emails) == 0 {
+		return nil
+	}
+
+	return &emails[0]
 }
 
 // MiddlewareHandler A main handler for each middleware
@@ -118,7 +170,7 @@ func (b *Router) Handle(path string, h RouteHandler, methods ...string) {
 	handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := &Context{
 			ResponseWriter: w,
-			Request: req,
+			Request:        req,
 		}
 
 		// handleAbort is a helper function to check if the context should abort
@@ -172,4 +224,3 @@ var LoggerMiddleware = NewMiddleware(
 		log.Println("executing request")
 	},
 )
-

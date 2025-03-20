@@ -13,6 +13,7 @@ func MainHandler() http.Handler {
 
 	defaultBase := util.NewRouter(mux, "/")
 	defaultBase.Use(util.LoggerMiddleware)
+	defaultBase.Use(util.DatabaseMiddleware)
 
 	defaultBase.Handle("/ping", getPing, http.MethodGet, http.MethodPost)
 	defaultBase.Handle("/test", routes.PostUser, http.MethodPost)
@@ -20,8 +21,9 @@ func MainHandler() http.Handler {
 	// Any routes using this middleware must be fully authorized
 	authBase := defaultBase.Branch("/api")
 	authBase.Use(util.AuthMiddleware)
-	authBase.Use(util.DatabaseMiddleware)
 	authBase.Handle("/auth", getAuth, http.MethodGet)
+	authBase.Handle("/user", routes.PostUser, http.MethodPost)
+	authBase.Handle("/user", routes.GetUser, http.MethodGet)
 	return mux
 }
 

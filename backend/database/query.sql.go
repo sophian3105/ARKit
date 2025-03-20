@@ -15,6 +15,7 @@ INSERT INTO users (
 ) VALUES (
   ?, ?, ?
 )
+ON CONFLICT(id) DO UPDATE SET id = excluded.id
 RETURNING id, name, email
 `
 

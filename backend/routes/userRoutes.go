@@ -3,39 +3,47 @@ package routes
 import (
 	"aria/backend/database"
 	"aria/backend/utility"
-	"encoding/json"
 	"net/http"
 )
 
 type User struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID    *string `json:"id"`
+	Name  *string `json:"name"`
+	Email *string `json:"email"`
 }
 
 func userFrom(u *database.User) User {
 	return User{
-		ID:    u.ID,
-		Name:  u.Name,
-		Email: u.Email,
+		ID:    &u.ID,
+		Name:  &u.Name,
+		Email: &u.Email,
 	}
 }
 
 func GetUser(ctx *utility.Context) {
-	ctx.WriteHeader(http.StatusOK)
+	// TODO finish this method
 }
 
+// PostUser creates a new user
+// Must be authenticated
 func PostUser(ctx *utility.Context) {
-	var user database.User
-
-	if err := json.NewDecoder(ctx.Body).Decode(&user); err != nil {
-		ctx.AbortWithStatus(http.StatusBadRequest, "Invalid request")
+	uid := ctx.UID
+	email := ctx.GetEmail()
+	if email == nil {
+		ctx.AbortWithStatus(http.StatusBadRequest, "No email found")
 		return
 	}
-	u, err := ctx.CreateUser(ctx.Context(), database.CreateUserParams(user))
-	if err != nil {
-		ctx.AbortWithStatus(http.StatusInternalServerError, "Error in create user")
-	}
-	ctx.Json(http.StatusCreated, userFrom(&u))
 
+	createUserParams := database.CreateUserParams{
+		ID:    uid,
+		Email: *email,
+	}
+
+	u, err := ctx.CreateUser(ctx.Context(), createUserParams)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	ctx.Json(http.StatusCreated, userFrom(&u))
 }

@@ -12,6 +12,7 @@ INSERT INTO users (
 ) VALUES (
   ?, ?, ?
 )
+ON CONFLICT(id) DO UPDATE SET id = excluded.id
 RETURNING *;
 
 -- name: UpdateUser :one

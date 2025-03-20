@@ -11,40 +11,42 @@ import (
 
 	firebase "firebase.google.com/go/v4"
 	"firebase.google.com/go/v4/auth"
-	"firebase.google.com/go/v4/db"
 	"google.golang.org/api/option"
 )
 
 type FirebaseClient struct {
-	Database *db.Client
 	Auth *auth.Client
 }
 
 var fbMu sync.Mutex
 var fireDB *FirebaseClient = nil
- 
+
 func (fc *FirebaseClient) connect() error {
 	home, err := os.Getwd()
 	dbUrl := os.Getenv("DB_URL")
 
-	if err != nil { return err }
-	if dbUrl == "" { return fmt.Errorf("empty DB_URL string") }
-	
+	if err != nil {
+		return err
+	}
+	if dbUrl == "" {
+		return fmt.Errorf("empty DB_URL string")
+	}
+
 	ctx := context.Background()
 	opt := option.WithCredentialsFile(home + "/firebase-adminsdk.json")
 	config := &firebase.Config{DatabaseURL: dbUrl}
 	app, err := firebase.NewApp(ctx, config, opt)
 
-	if err != nil { return fmt.Errorf("error initializing app %v", err) }
-
-	dbClient, dbErr := app.Database(ctx)
-	authClient, authErr := app.Auth(ctx)
-
-	if dbErr != nil || authErr != nil {
-		return fmt.Errorf("error initializing clients: %v %v", authErr, dbErr)
+	if err != nil {
+		return fmt.Errorf("error initializing app %v", err)
 	}
 
-	fc.Database = dbClient
+	authClient, authErr := app.Auth(ctx)
+
+	if authErr != nil {
+		return fmt.Errorf("error initializing clients: %v", authErr)
+	}
+
 	fc.Auth = authClient
 	return nil
 }
@@ -56,8 +58,8 @@ func FBClient() *FirebaseClient {
 
 	if fireDB == nil {
 		tmp := &FirebaseClient{}
-		err := tmp.connect() 
-		
+		err := tmp.connect()
+
 		if err == nil {
 			// Successful so assign
 			fireDB = tmp
@@ -83,7 +85,7 @@ var AuthMiddleware = NewMiddleware(
 		}
 
 		authToken, err := client.Auth.VerifyIDToken(ctx.Context(), authTokenString)
-		
+
 		if err != nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized, err.Error())
 			return
@@ -92,4 +94,3 @@ var AuthMiddleware = NewMiddleware(
 		ctx.Token = authToken
 	},
 )
-
