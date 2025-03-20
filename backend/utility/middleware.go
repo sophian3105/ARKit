@@ -1,6 +1,7 @@
 package utility
 
 import (
+	"aria/backend/database"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -13,6 +14,7 @@ import (
 // Context The data passed and can be filled
 type Context struct {
 	*auth.Token // Can be nil
+	*database.Queries
 
 	// This field allows you to abort right away and return this response
 	// Default 0 means there is no status
@@ -165,10 +167,9 @@ func mergePath(path1 string, path2 string) string {
 
 /* A few default implementations */
 
-func LoggerMiddleware() *Middleware {
-	return NewMiddleware(
-		func(d *Context) {
-			log.Println("executing request")
-		},
-	)
-}
+var LoggerMiddleware = NewMiddleware(
+	func(_ *Context) {
+		log.Println("executing request")
+	},
+)
+

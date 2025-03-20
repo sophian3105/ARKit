@@ -20,7 +20,7 @@ type FirebaseClient struct {
 	Auth *auth.Client
 }
 
-var mu sync.Mutex
+var fbMu sync.Mutex
 var fireDB *FirebaseClient = nil
  
 func (fc *FirebaseClient) connect() error {
@@ -49,9 +49,11 @@ func (fc *FirebaseClient) connect() error {
 	return nil
 }
 
-// Gets a singleton instance of FirebaseClient
+// FBClient Gets a singleton instance of FirebaseClient
 func FBClient() *FirebaseClient {
-	mu.Lock()
+	fbMu.Lock()
+	defer fbMu.Unlock()
+
 	if fireDB == nil {
 		tmp := &FirebaseClient{}
 		err := tmp.connect() 
@@ -64,13 +66,12 @@ func FBClient() *FirebaseClient {
 			log.Fatal(err)
 		}
 	}
-	mu.Unlock()
 
 	return fireDB
 }
 
-func AuthMiddleware() *Middleware {
-	return NewMiddleware(func(ctx *Context) {
+var AuthMiddleware = NewMiddleware(
+	func(ctx *Context) {
 		client := FBClient()
 
 		authHeader := ctx.Request.Header.Get("Authorization")
@@ -89,5 +90,6 @@ func AuthMiddleware() *Middleware {
 		}
 
 		ctx.Token = authToken
-	})
-}
+	},
+)
+
