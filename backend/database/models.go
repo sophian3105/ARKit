@@ -4,12 +4,8 @@
 
 package database
 
-import (
-	"database/sql"
-)
-
 type User struct {
 	ID    string
-	Name  sql.NullString
-	Email sql.NullString
+	Name  string
+	Email string
 }

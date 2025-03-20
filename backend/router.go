@@ -1,6 +1,7 @@
 package main
 
 import (
+	"aria/backend/routes"
 	util "aria/backend/utility"
 	"net/http"
 )
@@ -14,6 +15,7 @@ func MainHandler() http.Handler {
 	defaultBase.Use(util.LoggerMiddleware)
 
 	defaultBase.Handle("/ping", getPing, http.MethodGet, http.MethodPost)
+	defaultBase.Handle("/test", routes.PostUser, http.MethodPost)
 
 	// Any routes using this middleware must be fully authorized
 	authBase := defaultBase.Branch("/api")
