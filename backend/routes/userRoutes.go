@@ -22,6 +22,14 @@ func userFrom(u *database.User) User {
 
 func GetUser(ctx *utility.Context) {
 	// TODO finish this method
+	uid := ctx.UID
+	u, err := ctx.GetUser(ctx.Context(), uid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx.Json(http.StatusOK, userFrom(&u))
 }
 
 // PostUser creates a new user

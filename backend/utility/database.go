@@ -4,9 +4,11 @@ import (
 	"aria/backend/database"
 	"database/sql"
 	_ "embed"
-	_ "modernc.org/sqlite"
+	"log"
 	"os"
 	"sync"
+
+	_ "modernc.org/sqlite"
 )
 
 var dbMu sync.Mutex
@@ -35,7 +37,7 @@ func GetDB() *sql.DB {
 
 	// Add the schema to the database if it doesn't exist
 	if _, err := db.Exec(database.DDL); err != nil {
-		panic(err)
+		log.Println(err)
 	}
 
 	return db

@@ -95,13 +95,13 @@ func (ctx *Context) GetEmail() *string {
 		panic("GetEmail ctx is nil")
 	}
 
-	emails, ok := ctx.Token.Firebase.Identities["email"].([]string)
-
-	if !ok || len(emails) == 0 {
-		return nil
+	if tmp, ok := ctx.Token.Firebase.Identities["email"].([]any); ok && len(tmp) > 0 {
+		if email, ok := tmp[0].(string); ok {
+			return &email
+		}
 	}
 
-	return &emails[0]
+	return nil
 }
 
 // MiddlewareHandler A main handler for each middleware
